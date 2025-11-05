@@ -14,6 +14,7 @@ services:
       - BROKER_URL=${BROKER_URL}
       - RESULT_BACKEND=${RESULT_BACKEND}
       - MODELS=${MODELS}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
     volumes:
       - .:/app
     ports:

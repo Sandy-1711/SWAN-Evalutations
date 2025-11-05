@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     models: Any = Field(default_factory=list, alias="MODELS")
     results_dir: str = Field(default_factory=lambda: str(ROOT_DIR / "results"))
     database_url: str = Field(alias="DATABASE_URL")
+    environment: str = Field("production", alias="ENVIRONMENT")
 
     @field_validator("models", mode="before")
     def split_models(cls, v):
