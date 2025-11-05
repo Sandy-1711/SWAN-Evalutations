@@ -22,6 +22,7 @@ DATA_FILE = DATA_DIR / "dataset.json"
 # Model
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 TOP_K = 5
+DISTANCE_THRESHOLD = 0.4
 
 
 # ======================
@@ -107,7 +108,7 @@ model = SentenceTransformer(EMBEDDING_MODEL)
 # ======================
 # Public: Query Function
 # ======================
-def query(text: str, top_k: int = TOP_K, distance_threshold: float = 0.4) -> List[Dict]:
+def query(text: str, top_k: int = TOP_K, distance_threshold: float = DISTANCE_THRESHOLD) -> List[Dict]:
     """Search most relevant chunks using FAISS + cosine proximity."""
     query_vector = model.encode([text])[0].astype(np.float32).reshape(1, -1)
     distances, indices = index.search(query_vector, top_k)
