@@ -17,7 +17,7 @@ if settings.environment == "local":
 
 else:
     coder_llm_2048 = Llama(
-        model_path="models/coder_F32/unsloth.F32.gguf",
+        model_path="model_files/coder_F32/unsloth.F32.gguf",
         n_ctx=2048,
         verbose=False,
         use_mmap=True,
@@ -26,7 +26,7 @@ else:
     )
 
     compressor_llm_2048 = Llama(
-        model_path="models/compressor_F32/unsloth.F32.gguf",
+        model_path="model_files/compressor_F32/unsloth.F32.gguf",
         n_ctx=2048,
         verbose=False,
         use_mmap=True,
@@ -35,7 +35,7 @@ else:
     )
 
     generator_llm_2048 = Llama(
-        model_path="models/generator_F32/unsloth.F32.gguf",
+        model_path="model_files/generator_F32/unsloth.F32.gguf",
         n_ctx=2048,
         verbose=False,
         use_mmap=True,
@@ -44,7 +44,7 @@ else:
     )
 
     baseline_llm = Llama(
-        model_path="models/baseline_F32/unsloth.F32.gguf",
+        model_path="model_files/baseline_F32/unsloth.F32.gguf",
         n_ctx=2048,
         verbose=False,
         use_mmap=True,
@@ -53,7 +53,7 @@ else:
     )
 
     base_llm = Llama(
-        model_path="models/qwen/unsloth.BF16.gguf",
+        model_path="model_files/qwen/unsloth.BF16.gguf",
         n_ctx=2048,
         verbose=False,
         use_mmap=True,
