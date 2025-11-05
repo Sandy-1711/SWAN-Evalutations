@@ -1,0 +1,13 @@
+{
+    "model": "baseline",
+    "prompt": "string",
+    "code": "# Simulated code for prompt: string",
+    "output": {
+        "result": "ok",
+        "details": "Processed by model_a"
+    },
+    "time_taken": 1.000129222869873,
+    "cpu_percent": 2.5,
+    "memory_percent": 26.9,
+    "temperature": null
+}
