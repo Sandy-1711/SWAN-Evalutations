@@ -1,5 +1,4 @@
 import json
-import os
 from typing import List, Dict, Tuple
 from sentence_transformers import SentenceTransformer
 import numpy as np
