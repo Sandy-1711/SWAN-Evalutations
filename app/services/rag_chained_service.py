@@ -5,8 +5,8 @@ from app.inferences.generator_inference import generate as generate_json
 from app.rag.run import query
 
 
-def invoke(prompt):
-    results = query(prompt, 3)
+def invoke(prompt, top_k, distance_threshold):
+    results = query(prompt, top_k=top_k, distance_threshold=distance_threshold)
     # return results[1:] if len(results) > 1 else []
     return results if len(results) > 0 else []
 
@@ -15,11 +15,13 @@ def filter_rag_context(chunks, fields):
     return [{key: chunk[key] for key in fields if key in chunk} for chunk in chunks]
 
 
-def run_pipeline(user_prompt: str):
+def run_pipeline(user_prompt: str, top_k: int, distance_threshold: float):
     prompt = user_prompt
 
     # Coder RAG context
-    coder_rag_context_raw = invoke(prompt)
+    coder_rag_context_raw = invoke(
+        prompt, top_k=top_k, distance_threshold=distance_threshold
+    )
     print(coder_rag_context_raw)
     if coder_rag_context_raw:
         best_score = min(item.get("score", 1.0) for item in coder_rag_context_raw)
@@ -31,10 +33,10 @@ def run_pipeline(user_prompt: str):
         yield {
             "status": "abort",
             "reason": "No similar examples found in our dataset. Please try another query.",
-            "score": best_score
+            "score": best_score,
         }
         return
-    
+
     coder_rag_context = filter_rag_context(coder_rag_context_raw, ["prompt", "code"])
     yield {"stage": "rag_stage_1_done", "context": coder_rag_context}
 
@@ -46,7 +48,9 @@ def run_pipeline(user_prompt: str):
             code = chunk["code"]
 
     # Compressor RAG context
-    compressor_rag_context_raw = invoke(code)
+    compressor_rag_context_raw = invoke(
+        code, top_k=top_k, distance_threshold=distance_threshold
+    )
     compressor_rag_context = filter_rag_context(
         compressor_rag_context_raw, ["prompt", "circuit_space"]
     )
@@ -61,7 +65,7 @@ def run_pipeline(user_prompt: str):
             ir = chunk["ir"]
 
     # Generator RAG context
-    enriched_ir_raw = invoke(ir)
+    enriched_ir_raw = invoke(ir, top_k=top_k, distance_threshold=distance_threshold)
     enriched_ir = filter_rag_context(enriched_ir_raw, ["circuit_space", "output"])
     yield {"stage": "rag_stage_3_done", "context": enriched_ir}
 

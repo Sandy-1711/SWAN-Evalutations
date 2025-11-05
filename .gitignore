@@ -45,3 +45,28 @@ build
 .venv3.*/lib64/python*/site-packages
 .venv3.*/lib64/python*/dist-packages
 results/
+model_files/
+
+# === Embeddings and cache files ===
+app/embeddings/
+*.npy
+*.npz
+*.pkl
+*.pt
+*.bin
+*.h5
+
+# === Temporary data ===
+app/data/*.tmp
+app/data/*.bak
+app/data/*.log
+
+# === System and IDE files ===
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
