@@ -6,7 +6,7 @@ from pathlib import Path
 from app.schemas import PromptRequest
 from app.celery_app import run_model
 from app.db import SessionLocal
-from app.models import EvaluationJob
+from app.models import EvaluationJob, Prompt
 from app.config import settings
 
 router = APIRouter()
@@ -25,7 +25,13 @@ def add_prompt(request: PromptRequest, db: Session = Depends(get_db)):
     if not prompt or not prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt must not be empty.")
 
-    # settings.models can be a list or dict of model names. Iterate over keys if dict.
+    # Create a prompt record first
+    prompt_record = Prompt(prompt_text=prompt)
+    db.add(prompt_record)
+    db.commit()
+    db.refresh(prompt_record)
+
+    # settings.models can be a list or dict of model names
     model_names = settings.models.keys() if isinstance(settings.models, dict) else settings.models
     if not model_names:
         raise HTTPException(status_code=400, detail="No models configured in settings.models.")
@@ -33,11 +39,11 @@ def add_prompt(request: PromptRequest, db: Session = Depends(get_db)):
     task_ids = {}
     for model in model_names:
         # enqueue task
-        task = run_model.delay(prompt, model)
+        task = run_model.delay(prompt, model, prompt_record.id)
 
-        # persist job row
+        # persist job row with prompt_id
         job = EvaluationJob(
-            prompt=prompt,
+            prompt_id=prompt_record.id,
             model_name=model,
             task_id=task.id,
             state="PENDING",
@@ -52,7 +58,12 @@ def add_prompt(request: PromptRequest, db: Session = Depends(get_db)):
 
         task_ids[model] = task.id
 
-    return {"message": "Prompt queued", "prompt": prompt, "task_ids": task_ids}
+    return {
+        "message": "Prompt queued",
+        "prompt_id": prompt_record.id,
+        "prompt": prompt,
+        "task_ids": task_ids
+    }
 
 
 @router.get("/status/{task_id}")
@@ -81,12 +92,68 @@ def list_results(db: Session = Depends(get_db)):
         {
             "task_id": r.task_id,
             "model": r.model_name,
-            "prompt": r.prompt,
+            "prompt": r.prompt_record.prompt_text,
             "result_path": r.result_path,
             "completed_at": r.completed_at,
         }
         for r in results
     ]
+
+
+@router.get("/prompts")
+def list_prompts(db: Session = Depends(get_db)):
+    """Get all prompts with their evaluation jobs"""
+    prompts = db.query(Prompt).order_by(Prompt.created_at.desc()).all()
+    
+    result = []
+    for prompt in prompts:
+        jobs_summary = []
+        for job in prompt.evaluation_jobs:
+            jobs_summary.append({
+                "task_id": job.task_id,
+                "model": job.model_name,
+                "state": job.state,
+                "time_taken": job.time_taken,
+                "completed_at": job.completed_at,
+                "result_path": job.result_path,
+            })
+        
+        result.append({
+            "prompt_id": prompt.id,
+            "prompt_text": prompt.prompt_text,
+            "created_at": prompt.created_at,
+            "evaluations": jobs_summary,
+        })
+    
+    return result
+
+
+@router.get("/prompts/{prompt_id}")
+def get_prompt_results(prompt_id: int, db: Session = Depends(get_db)):
+    """Get all results for a specific prompt"""
+    prompt = db.query(Prompt).filter_by(id=prompt_id).first()
+    if not prompt:
+        raise HTTPException(status_code=404, detail="Prompt not found")
+    
+    jobs = []
+    for job in prompt.evaluation_jobs:
+        jobs.append({
+            "task_id": job.task_id,
+            "model": job.model_name,
+            "state": job.state,
+            "metrics": job.metrics,
+            "time_taken": job.time_taken,
+            "created_at": job.created_at,
+            "completed_at": job.completed_at,
+            "result_path": job.result_path,
+        })
+    
+    return {
+        "prompt_id": prompt.id,
+        "prompt_text": prompt.prompt_text,
+        "created_at": prompt.created_at,
+        "evaluations": jobs,
+    }
 
 
 @router.get("/download/{task_id}")

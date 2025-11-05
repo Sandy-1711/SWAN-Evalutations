@@ -44,3 +44,4 @@ build
 .venv3.*/lib/python*/dist-packages
 .venv3.*/lib64/python*/site-packages
 .venv3.*/lib64/python*/dist-packages
+results/

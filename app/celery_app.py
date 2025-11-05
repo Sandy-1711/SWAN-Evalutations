@@ -22,13 +22,18 @@ celery.conf.update(
     enable_utc=True,
 )
 
-@celery.task(bind=True, name="run_model")  # bind=True to access self.request.id
-def run_model(self, prompt: str, model_name: str):
+@celery.task(bind=True, name="run_model")
+def run_model(self, prompt: str, model_name: str, prompt_id: int):
     db = SessionLocal()
     try:
         job = db.query(EvaluationJob).filter_by(task_id=self.request.id).first()
         if not job:
-            job = EvaluationJob(task_id=self.request.id, prompt=prompt, model_name=model_name, state="PENDING")
+            job = EvaluationJob(
+                task_id=self.request.id,
+                prompt_id=prompt_id,
+                model_name=model_name,
+                state="PENDING"
+            )
             db.add(job)
             db.commit()
             db.refresh(job)
@@ -43,14 +48,13 @@ def run_model(self, prompt: str, model_name: str):
 
         stats_before = get_system_stats()
 
-        # Execute model function; expected to return a dict (e.g., {"code": ..., "json": ..., "time_taken": ...})
+        # Execute model function
         result_payload = func(prompt)
 
         if not isinstance(result_payload, dict):
             raise ValueError("Model function must return a dict payload.")
 
         stats_after = get_system_stats()
-        # Merge system stats post-run; keep original keys from model result
         merged_result = {**result_payload, "system_stats_before": stats_before, "system_stats_after": stats_after}
 
         # Persist result artifact and store path
@@ -66,7 +70,6 @@ def run_model(self, prompt: str, model_name: str):
         return {"model": model_name, "prompt": prompt, "task_id": self.request.id}
 
     except Exception as e:
-        # Record failure
         try:
             db.rollback()
             job = db.query(EvaluationJob).filter_by(task_id=self.request.id).first()
@@ -76,7 +79,6 @@ def run_model(self, prompt: str, model_name: str):
                 job.completed_at = datetime.now(timezone.utc)
                 db.commit()
         finally:
-            # Still raise so Celery marks the task as failed in its backend if desired
             raise
     finally:
         db.close()
